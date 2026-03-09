@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import Animated from 'react-native-reanimated';
 
 export function HelloWave() {
@@ -13,7 +14,7 @@ export function HelloWave() {
         animationIterationCount: 4,
         animationDuration: '300ms',
       }}>
-      👋
+      <Ionicons name="hand-left" size={28} color="#FFD700" />
     </Animated.Text>
   );
 }

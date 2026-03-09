@@ -1,53 +1,53 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
+export const GreenTheme = {
+  primary: '#006B3E', // Deep Emerald Green
+  secondary: '#F0F9F4', // Soft Sage Tint
+  accent: '#FFD700', // Gold Accent
+  background: '#F7FCF9', // Crisp Off-white with green hint
+  text: '#013220', // Night Forest Green
+  border: '#E0EAE4',
+  card: '#FFFFFF',
+  placeholder: '#8CA096',
+  error: '#FF5252',
+  success: '#00C853',
+  icon: '#2E7D32',
+  radius: 24, // High radius for squircle look
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const DarkTheme = {
+  primary: '#34D399', // Emerald 400
+  secondary: '#064E3B', // Deep Emerald 900
+  accent: '#FBBF24', // Amber 400
+  background: '#020617', // Slate 950
+  text: '#F8FAFC', // Slate 50
+  border: '#1E293B', // Slate 800
+  card: '#0F172A', // Slate 900
+  placeholder: '#64748B', // Slate 500
+  error: '#F87171',
+  success: '#10B981',
+  icon: '#94A3B8',
+  radius: 24,
+};
+
+export const BoyTheme = GreenTheme; // Defaulting to Green as per user request
+
+export const GirlTheme = {
+  primary: '#EC4899', // Pink 500
+  secondary: '#FDF2F8', // Pink 50 tint
+  accent: '#FDE68A', // Gold/Amber hint
+  background: '#FFF1F2', // Rose 50
+  text: '#831843', // Rose 900
+  border: '#FCE7F3',
+  card: '#FFFFFF',
+  placeholder: '#D1D5DB',
+  error: '#EF4444',
+  success: '#10B981',
+  icon: '#EC4899',
+  radius: 24,
+};
+
+export const Colors = {
+  light: GreenTheme,
+  dark: DarkTheme,
+};
+
+export type Theme = typeof GreenTheme;

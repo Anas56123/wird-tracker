@@ -1,24 +1,53 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { AppProvider, useApp } from '@/context/AppContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { useEffect } from 'react';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function RootLayoutContent() {
+  const { theme, isLoading, language, isDarkMode } = useApp();
+  const [loaded] = useFonts({
+    ...Ionicons.font,
+  });
+
+  useEffect(() => {
+    if (loaded && !isLoading) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, isLoading]);
+
+  if (!loaded || isLoading) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    <>
+      <Stack screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: theme.background,
+          direction: language === 'ar' ? 'rtl' : 'ltr'
+        },
+        animation: 'slide_from_right'
+      }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="setup" />
+        <Stack.Screen name="(main)/dashboard" />
+        <Stack.Screen name="(main)/preview" />
+        <Stack.Screen name="(main)/report" />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AppProvider>
+      <RootLayoutContent />
+    </AppProvider>
   );
 }
