@@ -76,6 +76,7 @@ const dashboardStyles = StyleSheet.create({
     },
     statItem: {
         flex: 1,
+        alignItems: 'center',
     },
     statLabel: {
         color: '#fff',
@@ -93,7 +94,7 @@ const dashboardStyles = StyleSheet.create({
         padding: 8,
         borderRadius: 8,
         marginTop: 16,
-        alignSelf: 'flex-start',
+        alignSelf: 'center',
     },
     carryOverText: {
         color: '#fff',
@@ -131,7 +132,7 @@ const dashboardStyles = StyleSheet.create({
 });
 
 export default function Dashboard() {
-    const { theme, t, user, carryOver, isDarkMode, toggleDarkMode, setLanguage, language } = useApp();
+    const { theme, t, user, carryOver, themeMode, toggleDarkMode, setLanguage, language } = useApp();
     const router = useRouter();
 
     if (!user) return null;
@@ -162,7 +163,15 @@ export default function Dashboard() {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                         <TouchableOpacity style={[dashboardStyles.topIconBtn]} onPress={toggleDarkMode}>
-                            <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={24} color={theme.primary} />
+                            <Ionicons
+                                name={
+                                    themeMode === 'pink' ? 'heart' :
+                                        themeMode === 'darkpink' ? 'heart-dislike' :
+                                            themeMode === 'dark' ? 'moon' : 'sunny'
+                                }
+                                size={24}
+                                color={theme.primary}
+                            />
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[dashboardStyles.profileButton, { backgroundColor: theme.secondary }]}
@@ -186,7 +195,9 @@ export default function Dashboard() {
                         </View>
                     </View>
                     <View style={[dashboardStyles.carryOverTag, { borderRadius: theme.radius / 3 }]}>
-                        <Text style={dashboardStyles.carryOverText}>{t.carryOverInfo || "Points from yesterday: 0"}</Text>
+                        <Text style={dashboardStyles.carryOverText}>
+                            {t.carryOverInfo.replace('{count}', (carryOver.recitation + carryOver.memorization).toString())}
+                        </Text>
                     </View>
                 </View>
 

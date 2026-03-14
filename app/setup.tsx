@@ -3,8 +3,11 @@ import { SelectionMode, UserProfile, daysOfWeek, getHizbRange, getJuzRange, getS
 import { Ionicons } from '@expo/vector-icons';
 import * as QuranMetadata from '@kmaslesa/quran-metadata';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions } from 'react-native';
+import Animated, { FadeInDown, FadeInRight, FadeInLeft, Layout } from 'react-native-reanimated';
+
+const { width } = Dimensions.get('window');
 
 const setupStyles = StyleSheet.create({
     container: {
@@ -13,6 +16,7 @@ const setupStyles = StyleSheet.create({
     scrollContent: {
         padding: 24,
         paddingBottom: 60,
+        flexGrow: 1,
     },
     headerRow: {
         flexDirection: 'row',
@@ -22,154 +26,185 @@ const setupStyles = StyleSheet.create({
         marginBottom: 20,
     },
     darkToggle: {
-        padding: 8,
+        padding: 10,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.03)',
     },
     title: {
-        fontSize: 26,
-        fontWeight: '800',
+        fontSize: 28,
+        fontWeight: '900',
+        letterSpacing: -0.5,
     },
     langSwitch: {
         flexDirection: 'row',
-        marginTop: 4,
+        marginTop: 6,
     },
     langTextBtn: {
-        marginEnd: 12,
-        paddingBottom: 2,
+        marginEnd: 16,
+        paddingBottom: 4,
     },
     langLabel: {
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '800',
     },
     formSection: {
-        marginBottom: 32,
+        flex: 1,
+        justifyContent: 'center',
+        minHeight: 350,
     },
     label: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 10,
-        marginTop: 16,
+        fontSize: 22,
+        fontWeight: '800',
+        marginBottom: 20,
+        marginTop: 20,
+        textAlign: 'center',
+        lineHeight: 30,
     },
     input: {
-        height: 52,
-        borderWidth: 1.5,
-        paddingHorizontal: 16,
-        fontSize: 16,
+        height: 64,
+        borderWidth: 2.5,
+        paddingHorizontal: 20,
+        fontSize: 20,
+        fontWeight: '700',
+        textAlign: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 2,
     },
     genderRow: {
         flexDirection: 'row',
-        marginBottom: 8,
+        marginBottom: 12,
+        gap: 12,
     },
     choiceButton: {
         flex: 1,
-        height: 48,
-        borderWidth: 1.5,
+        height: 60,
+        borderWidth: 2.5,
         alignItems: 'center',
         justifyContent: 'center',
-        marginEnd: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     choiceText: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: '800',
     },
     surahSelectBtn: {
-        height: 52,
-        borderWidth: 1.5,
-        paddingHorizontal: 16,
+        height: 64,
+        borderWidth: 2.5,
+        paddingHorizontal: 20,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 3,
     },
     breakDaysGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginTop: 8,
+        marginTop: 12,
+        justifyContent: 'center',
+        gap: 12,
     },
     dayChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderWidth: 1.5,
-        marginEnd: 10,
-        marginBottom: 10,
-    },
-    dayChipText: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    saveButton: {
-        height: 60,
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        borderWidth: 2.5,
         alignItems: 'center',
         justifyContent: 'center',
-        elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 1,
+    },
+    dayChipText: {
+        fontSize: 16,
+        fontWeight: '800',
+        textAlign: 'center',
+    },
+    footerContainer: {
+        padding: 24,
+        flexDirection: 'row',
+        gap: 16,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    },
+    navButton: {
+        flex: 1,
+        height: 64,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
         shadowRadius: 12,
     },
-    saveButtonText: {
+    navButtonText: {
         color: '#fff',
-        fontSize: 18,
-        fontWeight: '800',
+        fontSize: 20,
+        fontWeight: '900',
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        padding: 20,
+        padding: 24,
         borderBottomWidth: 1,
         alignItems: 'center',
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: '800',
+        fontSize: 22,
+        fontWeight: '900',
     },
     surahItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        padding: 18,
-        marginBottom: 8,
-        borderWidth: 1,
+        padding: 20,
+        marginBottom: 12,
+        borderWidth: 1.5,
     },
     surahName: {
-        fontSize: 16,
-        fontWeight: '500',
+        fontSize: 18,
+        fontWeight: '700',
     },
     searchInput: {
-        height: 54,
-        paddingHorizontal: 18,
-        margin: 16,
-        borderWidth: 1.5,
-        fontSize: 16,
-    },
-    stepperContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
         height: 56,
-        borderWidth: 1.5,
-        paddingHorizontal: 16,
-        justifyContent: 'space-between'
+        paddingHorizontal: 20,
+        margin: 20,
+        borderWidth: 2,
+        fontSize: 16,
+        fontWeight: '600',
     },
-    stepperButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
+    progressIndicator: {
+        height: 6,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        borderRadius: 3,
+        overflow: 'hidden',
+        marginBottom: 20,
     },
-    stepperValue: {
-        fontSize: 20,
-        fontWeight: '800',
+    progressBar: {
+        height: '100%',
+        borderRadius: 3,
     }
 });
 
 export default function SetupScreen() {
-    const { theme, t, setUser, language, setLanguage, isDarkMode, toggleDarkMode, user } = useApp();
+    const { theme, t, setUser, language, setLanguage, themeMode, toggleDarkMode, user } = useApp();
     const router = useRouter();
 
+    const [step, setStep] = useState(0);
     const [name, setName] = useState(user?.name || '');
-    const [gender, setGender] = useState<'boy' | 'girl'>(user?.gender || 'boy');
     const [memPerDay, setMemPerDay] = useState(user?.memPerDay?.toString() || '1');
     const [selectionMode, setSelectionMode] = useState<SelectionMode>(user?.selectionMode || 'surah');
 
-    // Separate states for linked selection
     const [selectedSurahs, setSelectedSurahs] = useState<number[]>(user?.selectedSurahs || []);
     const [selectedJuzs, setSelectedJuzs] = useState<number[]>(user?.selectedJuzs || []);
     const [selectedHizbs, setSelectedHizbs] = useState<number[]>(user?.selectedHizbs || []);
@@ -177,40 +212,85 @@ export default function SetupScreen() {
     const [breaks, setBreaks] = useState<string[]>(user?.breakDays || []);
     const [modalVisible, setModalVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortType, setSortType] = useState<'default' | 'oldest' | 'newest'>('default');
-    const [filterType, setFilterType] = useState<'all' | 'meccan' | 'medinan'>('all');
+
+    const [memSelectionMode, setMemSelectionMode] = useState<'systematic' | 'manual'>(user?.memSelectionMode || 'systematic');
+    const [manualMemSelectionMode, setManualMemSelectionMode] = useState<SelectionMode>(user?.manualMemSelectionMode || 'surah');
+    const [manualMemSurahs, setManualMemSurahs] = useState<number[]>(user?.manualMemSurahs || []);
+    const [manualMemJuzs, setManualMemJuzs] = useState<number[]>(user?.manualMemJuzs || []);
+    const [manualMemHizbs, setManualMemHizbs] = useState<number[]>(user?.manualMemHizbs || []);
+    
+    const [memModalVisible, setMemModalVisible] = useState(false);
+    const [mainGoal, setMainGoal] = useState<'memorize' | 'revise'>(user?.mainGoal || 'memorize');
+
+    const totalSteps = 5;
+    const progressWidth = ((step + 1) / totalSteps) * 100;
 
     const handleSave = async () => {
         if (!name.trim()) return alert('Please enter your name');
 
-        const profile: UserProfile = {
-            name,
-            gender,
-            language,
-            selectionMode,
-            selectedSurahs,
-            selectedJuzs,
-            selectedHizbs,
-            memPerDay: parseFloat(memPerDay) || 0,
-            breakDays: breaks,
-        };
+        let finalSurahs = selectedSurahs;
+        let finalJuzs = selectedJuzs;
+        let finalHizbs = selectedHizbs;
+        let finalMode = selectionMode;
 
-        await setUser(profile);
+        if (mainGoal === 'revise') {
+            finalMode = 'surah';
+            finalSurahs = Array.from({ length: 114 }, (_, i) => i + 1);
+            finalJuzs = Array.from({ length: 30 }, (_, i) => i + 1);
+            finalHizbs = Array.from({ length: 60 }, (_, i) => i + 1);
+        }
+
+        const newUser: UserProfile = {
+            name,
+            language,
+            selectionMode: finalMode,
+            selectedSurahs: finalSurahs,
+            selectedJuzs: finalJuzs,
+            selectedHizbs: finalHizbs,
+            memPerDay: parseFloat(memPerDay),
+            breakDays: breaks,
+            memSelectionMode,
+            manualMemSelectionMode,
+            manualMemSurahs,
+            manualMemJuzs,
+            manualMemHizbs,
+            mainGoal,
+        };
+        setUser(newUser);
         router.replace('/(main)/dashboard');
     };
 
-    const toggleItem = (id: number) => {
+    const nextStep = () => {
+        if (step === 1 && !name.trim()) return alert('Name is required');
+        
+        let targetStep = step + 1;
+        if (targetStep === 2 && mainGoal === 'revise') targetStep = 4;
+        setStep(targetStep);
+    };
+
+    const prevStep = () => {
+        let targetStep = step - 1;
+        if (targetStep === 3 && mainGoal === 'revise') targetStep = 1;
+        if (targetStep === 2 && mainGoal === 'revise') targetStep = 1;
+        setStep(targetStep);
+    };
+
+    const toggleItem = (id: number, isMem = false) => {
+        const mode = isMem ? manualMemSelectionMode : selectionMode;
         let currentRange: [number, number];
         let isAdding = false;
 
-        if (selectionMode === 'surah') {
-            isAdding = !selectedSurahs.includes(id);
+        if (mode === 'surah') {
+            const list = isMem ? manualMemSurahs : selectedSurahs;
+            isAdding = !list.includes(id);
             currentRange = getSurahRange(id);
-        } else if (selectionMode === 'juz') {
-            isAdding = !selectedJuzs.includes(id);
+        } else if (mode === 'juz') {
+            const list = isMem ? manualMemJuzs : selectedJuzs;
+            isAdding = !list.includes(id);
             currentRange = getJuzRange(id);
         } else {
-            isAdding = !selectedHizbs.includes(id);
+            const list = isMem ? manualMemHizbs : selectedHizbs;
+            isAdding = !list.includes(id);
             currentRange = getHizbRange(id);
         }
 
@@ -229,9 +309,15 @@ export default function SetupScreen() {
             return newList;
         };
 
-        setSelectedSurahs(prev => updateList(prev, getSurahRange, 114));
-        setSelectedJuzs(prev => updateList(prev, getJuzRange, 30));
-        setSelectedHizbs(prev => updateList(prev, getHizbRange, 60));
+        if (isMem) {
+            setManualMemSurahs(prev => updateList(prev, getSurahRange, 114));
+            setManualMemJuzs(prev => updateList(prev, getJuzRange, 30));
+            setManualMemHizbs(prev => updateList(prev, getHizbRange, 60));
+        } else {
+            setSelectedSurahs(prev => updateList(prev, getSurahRange, 114));
+            setSelectedJuzs(prev => updateList(prev, getJuzRange, 30));
+            setSelectedHizbs(prev => updateList(prev, getHizbRange, 60));
+        }
     };
 
     const toggleBreak = (day: string) => {
@@ -244,88 +330,94 @@ export default function SetupScreen() {
         }
     };
 
-    // Helper to get modal items
     const getModalItems = () => {
-        if (selectionMode === 'surah') {
-            let suraList = QuranMetadata.getSuraList();
-
-            // 1. Filtering by Revelation Place
-            if (filterType === 'meccan') suraList = QuranMetadata.getSuraListPublishedInMekka();
-            else if (filterType === 'medinan') suraList = QuranMetadata.getSuraListPublishedInMedina();
-
-            // 2. Searching (includes Bosnian as requested)
-            if (searchQuery) {
-                const byName = QuranMetadata.searchSuraByName(searchQuery);
-                const byAr = QuranMetadata.searchSuraByArabicName(searchQuery);
-                const byEn = QuranMetadata.searchSuraByEnglishName(searchQuery);
-
-                const combined = [...byName, ...byAr, ...byEn];
-                const seen = new Set();
-                const searchResults = combined.filter((s: any) => {
-                    const isDuplicate = seen.has(s.index);
-                    seen.add(s.index);
-                    return !isDuplicate;
-                });
-
-                // Keep only search results that are in the current filtered list (if any filtering applied)
-                const currentIds = new Set(suraList.map((s: any) => s.index));
-                suraList = searchResults.filter((s: any) => currentIds.has(s.index));
-            }
-
-            // 3. Sorting
-            if (sortType === 'oldest') suraList = suraList.sort((a: any, b: any) => a.orderInPublishing - b.orderInPublishing);
-            else if (sortType === 'newest') suraList = suraList.sort((a: any, b: any) => b.orderInPublishing - a.orderInPublishing);
-            else suraList = suraList.sort((a: any, b: any) => a.index - b.index);
-            return suraList.map((s: any) => ({
-                id: s.index,
-                name: language === 'ar' ? s.name.arabic : s.name.englishTranscription,
-                fullName: `${s.index}. ${language === 'ar' ? s.name.arabic : s.name.englishTranscription}`
-            }));
+        let list = QuranMetadata.getSuraList();
+        if (searchQuery) {
+            const byName = QuranMetadata.searchSuraByName(searchQuery);
+            const byAr = QuranMetadata.searchSuraByArabicName(searchQuery);
+            const byEn = QuranMetadata.searchSuraByEnglishName(searchQuery);
+            list = [...new Set([...byName, ...byAr, ...byEn].map(s => s.index))].map(idx => QuranMetadata.getSuraByIndex(idx));
         }
-        if (selectionMode === 'juz') {
-            const juzList = QuranMetadata.getJuzList();
-            return juzList.map((j: any) => ({
+        return list.map((s: any) => ({
+            id: s.index,
+            name: language === 'ar' ? s.name.arabic : s.name.englishTranscription
+        }));
+    };
+
+    const getSelectionModalItems = (isMem = false) => {
+        const mode = isMem ? manualMemSelectionMode : selectionMode;
+        if (mode === 'surah') return getModalItems();
+        if (mode === 'juz') {
+            return QuranMetadata.getJuzList().map((j: any) => ({
                 id: j.id,
                 name: `${t.juz} ${j.id}`
             }));
         }
-        if (selectionMode === 'hizb') {
+        if (mode === 'hizb') {
             return Array.from({ length: 60 }, (_, i) => ({ id: i + 1, name: `${t.hizb} ${i + 1}` }));
         }
         return [];
     };
 
-    return (
-        <SafeAreaView style={[setupStyles.container, { backgroundColor: theme.background, direction: language === 'ar' ? 'rtl' : 'ltr' }]}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-            >
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={setupStyles.scrollContent}>
-                    <View style={setupStyles.headerRow}>
-                        <View>
-                            <Text style={[setupStyles.title, { color: theme.text }]}>{t.createAccount}</Text>
-                            <View style={setupStyles.langSwitch}>
-                                {(['en', 'ar', 'fr'] as const).map(lang => (
-                                    <TouchableOpacity
-                                        key={lang}
-                                        onPress={() => setLanguage(lang)}
-                                        style={[setupStyles.langTextBtn, language === lang && { borderBottomColor: theme.primary, borderBottomWidth: 2 }]}
-                                    >
-                                        <Text style={[setupStyles.langLabel, { color: language === lang ? theme.primary : theme.placeholder }]}>
-                                            {lang.toUpperCase()}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                        <TouchableOpacity style={setupStyles.darkToggle} onPress={toggleDarkMode}>
-                            <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={24} color={theme.primary} />
-                        </TouchableOpacity>
-                    </View>
+    const getSelectedLabel = (isMem = false) => {
+        const mode = isMem ? manualMemSelectionMode : selectionMode;
+        const list = isMem 
+            ? (mode === 'surah' ? manualMemSurahs : mode === 'juz' ? manualMemJuzs : manualMemHizbs)
+            : (mode === 'surah' ? selectedSurahs : mode === 'juz' ? selectedJuzs : selectedHizbs);
+            
+        if (list.length === 0) return t.itemCount.replace('{count}', '0');
 
-                    <View style={setupStyles.formSection}>
+        if (mode === 'surah') {
+            const sorted = [...list].sort((a, b) => a - b);
+            const names = sorted.slice(0, 2).map(id => {
+                const s = QuranMetadata.getSuraByIndex(id);
+                return language === 'ar' ? s.name.arabic : s.name.englishTranscription;
+            });
+            let label = names.join(', ');
+            if (sorted.length > 2) label += ` +${sorted.length - 2}`;
+            return label;
+        }
+
+        return t.itemCount.replace('{count}', list.length.toString());
+    };
+
+    const renderStepContent = () => {
+        switch (step) {
+            case 0:
+                return (
+                    <Animated.View entering={FadeInDown.duration(600).springify()} style={setupStyles.formSection}>
+                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.mainGoal}</Text>
+                        <View style={[setupStyles.genderRow, language === 'ar' && { flexDirection: 'row-reverse' }]}>
+                            <TouchableOpacity
+                                style={[
+                                    setupStyles.choiceButton,
+                                    mainGoal === 'memorize' ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
+                                    { borderRadius: theme.radius / 1.5 }
+                                ]}
+                                onPress={() => setMainGoal('memorize')}
+                            >
+                                <Text style={[setupStyles.choiceText, mainGoal === 'memorize' ? { color: '#fff' } : { color: theme.text }]}>
+                                    {t.memorize}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    setupStyles.choiceButton,
+                                    mainGoal === 'revise' ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
+                                    { borderRadius: theme.radius / 1.5 }
+                                ]}
+                                onPress={() => setMainGoal('revise')}
+                            >
+                                <Text style={[setupStyles.choiceText, mainGoal === 'revise' ? { color: '#fff' } : { color: theme.text }]}>
+                                    {t.revise}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
+                );
+            case 1:
+                return (
+                    <Animated.View entering={FadeInRight.duration(600).springify()} style={setupStyles.formSection}>
                         <Text style={[setupStyles.label, { color: theme.text }]}>{t.name}</Text>
                         <TextInput
                             style={[
@@ -334,31 +426,16 @@ export default function SetupScreen() {
                             ]}
                             value={name}
                             onChangeText={setName}
-                            placeholder="Name"
+                            placeholder="Type your name..."
                             placeholderTextColor={theme.placeholder}
+                            autoFocus
                         />
-
-                        <Text style={[setupStyles.label, { color: theme.text, textAlign: language === 'ar' ? 'right' : 'left' }]}>{t.gender}</Text>
-                        <View style={[setupStyles.genderRow, language === 'ar' && { flexDirection: 'row-reverse' }]}>
-                            {(['boy', 'girl'] as const).map(g => (
-                                <TouchableOpacity
-                                    key={g}
-                                    style={[
-                                        setupStyles.choiceButton,
-                                        gender === g ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
-                                        language === 'ar' ? { marginLeft: 8 } : { marginRight: 8 },
-                                        { borderRadius: theme.radius / 2 }
-                                    ]}
-                                    onPress={() => setGender(g)}
-                                >
-                                    <Text style={[setupStyles.choiceText, gender === g ? { color: '#fff' } : { color: theme.text }]}>
-                                        {t[g]}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <Text style={[setupStyles.label, { color: theme.text, textAlign: language === 'ar' ? 'right' : 'left' }]}>{t.selectionMode}</Text>
+                    </Animated.View>
+                );
+            case 2:
+                return (
+                    <Animated.View entering={FadeInRight.duration(600).springify()} style={setupStyles.formSection}>
+                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.selectionMode + " (Recitation)"}</Text>
                         <View style={[setupStyles.genderRow, language === 'ar' && { flexDirection: 'row-reverse' }]}>
                             {(['surah', 'juz', 'hizb'] as const).map(mode => (
                                 <TouchableOpacity
@@ -366,7 +443,6 @@ export default function SetupScreen() {
                                     style={[
                                         setupStyles.choiceButton,
                                         selectionMode === mode ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
-                                        language === 'ar' ? { marginLeft: 8 } : { marginRight: 8 },
                                         { borderRadius: theme.radius / 2 }
                                     ]}
                                     onPress={() => setSelectionMode(mode)}
@@ -378,7 +454,7 @@ export default function SetupScreen() {
                             ))}
                         </View>
 
-                        <Text style={[setupStyles.label, { color: theme.text, textAlign: language === 'ar' ? 'right' : 'left' }]}>
+                        <Text style={[setupStyles.label, { color: theme.text }]}>
                             {selectionMode === 'surah' ? t.selectSurahs : `${t[selectionMode]}`}
                         </Text>
                         <TouchableOpacity
@@ -388,43 +464,98 @@ export default function SetupScreen() {
                             ]}
                             onPress={() => setModalVisible(true)}
                         >
-                            <Text style={{ color: theme.text, fontWeight: '600' }}>
-                                {t.itemCount.replace('{count}', (selectionMode === 'surah' ? selectedSurahs : selectionMode === 'juz' ? selectedJuzs : selectedHizbs).length.toString())}
+                            <Text style={{ color: theme.text, fontWeight: '800', fontSize: 18 }}>
+                                {getSelectedLabel()}
                             </Text>
                             <Ionicons name="apps" size={24} color={theme.primary} />
                         </TouchableOpacity>
+                    </Animated.View>
+                );
+            case 3:
+                return (
+                    <Animated.View entering={FadeInRight.duration(600).springify()} style={setupStyles.formSection}>
+                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.memPerDay}</Text>
+                        <View style={[setupStyles.genderRow, language === 'ar' && { flexDirection: 'row-reverse' }]}>
+                            {([0.5, 1, 2, 5] as const).map(opt => (
+                                <TouchableOpacity
+                                    key={opt}
+                                    style={[
+                                        setupStyles.choiceButton,
+                                        parseFloat(memPerDay) === opt ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
+                                        { borderRadius: theme.radius / 2 }
+                                    ]}
+                                    onPress={() => setMemPerDay(opt.toString())}
+                                >
+                                    <Text style={[setupStyles.choiceText, parseFloat(memPerDay) === opt ? { color: '#fff' } : { color: theme.text }]}>
+                                        {opt}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
-                        <Text style={[setupStyles.label, { color: theme.text, textAlign: language === 'ar' ? 'right' : 'left' }]}>{t.memPerDay}</Text>
-                        <View style={[
-                            setupStyles.stepperContainer,
-                            { borderColor: theme.border, backgroundColor: theme.card, flexDirection: language === 'ar' ? 'row-reverse' : 'row', borderRadius: theme.radius / 2 }
-                        ]}>
+                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.selectionMode + " (Memorization)"}</Text>
+                        <View style={setupStyles.genderRow}>
                             <TouchableOpacity
-                                onPress={() => setMemPerDay(String(Math.max(0, (parseFloat(memPerDay) || 0) - 1)))}
-                                style={[setupStyles.stepperButton, { backgroundColor: theme.secondary }]}
+                                style={[setupStyles.choiceButton, memSelectionMode === 'systematic' ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border }, { borderRadius: theme.radius / 1.5, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
+                                onPress={() => setMemSelectionMode('systematic')}
                             >
-                                <Ionicons name="remove" size={24} color={theme.primary} />
+                                <Text style={[setupStyles.choiceText, memSelectionMode === 'systematic' ? { color: '#fff' } : { color: theme.text }]}>
+                                    Systematic AI
+                                </Text>
                             </TouchableOpacity>
-                            <Text style={[setupStyles.stepperValue, { color: theme.text }]}>
-                                {memPerDay}
-                            </Text>
                             <TouchableOpacity
-                                onPress={() => setMemPerDay(String((parseFloat(memPerDay) || 1) + 1))}
-                                style={[setupStyles.stepperButton, { backgroundColor: theme.secondary }]}
+                                style={[setupStyles.choiceButton, memSelectionMode === 'manual' ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border }, { borderRadius: theme.radius / 1.5, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
+                                onPress={() => setMemSelectionMode('manual')}
                             >
-                                <Ionicons name="add" size={24} color={theme.primary} />
+                                <Text style={[setupStyles.choiceText, memSelectionMode === 'manual' ? { color: '#fff' } : { color: theme.text }]}>
+                                    Choose Manual
+                                </Text>
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={[setupStyles.label, { color: theme.text, textAlign: language === 'ar' ? 'right' : 'left' }]}>{t.breakDays}</Text>
-                        <View style={[setupStyles.breakDaysGrid, language === 'ar' && { flexDirection: 'row-reverse' }]}>
+                        {memSelectionMode === 'manual' && (
+                            <Animated.View entering={FadeInDown} style={{ marginTop: 20 }}>
+                                <View style={setupStyles.genderRow}>
+                                    {(['surah', 'juz', 'hizb'] as const).map(mode => (
+                                        <TouchableOpacity
+                                            key={mode}
+                                            style={[
+                                                setupStyles.choiceButton,
+                                                manualMemSelectionMode === mode ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
+                                                { borderRadius: theme.radius / 2.5 }
+                                            ]}
+                                            onPress={() => setManualMemSelectionMode(mode)}
+                                        >
+                                            <Text style={[setupStyles.choiceText, manualMemSelectionMode === mode ? { color: '#fff' } : { color: theme.text, fontSize: 14 }]}>
+                                                {t[mode]}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <TouchableOpacity
+                                    style={[setupStyles.surahSelectBtn, { borderColor: theme.border, backgroundColor: theme.card, borderRadius: theme.radius / 2, marginTop: 12 }]}
+                                    onPress={() => setMemModalVisible(true)}
+                                >
+                                    <Text style={{ color: theme.text, fontWeight: '800', fontSize: 16 }}>
+                                        {getSelectedLabel(true)}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={24} color={theme.primary} />
+                                </TouchableOpacity>
+                            </Animated.View>
+                        )}
+                    </Animated.View>
+                );
+            case 4:
+                return (
+                    <Animated.View entering={FadeInRight.duration(600).springify()} style={setupStyles.formSection}>
+                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.breakDays}</Text>
+                        <View style={setupStyles.breakDaysGrid}>
                             {daysOfWeek.map(day => (
                                 <TouchableOpacity
                                     key={day}
                                     style={[
                                         setupStyles.dayChip,
                                         breaks.includes(day) ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
-                                        language === 'ar' ? { marginLeft: 10 } : { marginRight: 10 },
                                         { borderRadius: theme.radius / 1.5 }
                                     ]}
                                     onPress={() => toggleBreak(day)}
@@ -435,29 +566,95 @@ export default function SetupScreen() {
                                 </TouchableOpacity>
                             ))}
                         </View>
-                    </View>
+                    </Animated.View>
+                );
+            default:
+                return null;
+        }
+    };
 
-                    <TouchableOpacity
-                        style={[setupStyles.saveButton, { backgroundColor: theme.primary, borderRadius: theme.radius }]}
-                        onPress={handleSave}
-                    >
-                        <Text style={setupStyles.saveButtonText}>{t.save}</Text>
-                    </TouchableOpacity>
-                </ScrollView>
-            </KeyboardAvoidingView>
+    const isLastStep = step === 4;
 
-            <Modal visible={modalVisible} animationType="slide">
-                <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-                    <View style={[setupStyles.modalHeader, { borderBottomColor: theme.border }]}>
-                        <Text style={[setupStyles.modalTitle, { color: theme.text }]}>
-                            {selectionMode === 'surah' ? t.selectSurahs : `${t[selectionMode]}`}
-                        </Text>
-                        <TouchableOpacity onPress={() => { setModalVisible(false); setSearchQuery(''); }}>
-                            <Text style={{ color: theme.primary, fontWeight: '700' }}>Done</Text>
+    return (
+        <SafeAreaView style={[setupStyles.container, { backgroundColor: theme.background, direction: language === 'ar' ? 'rtl' : 'ltr' }]}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+            >
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={setupStyles.scrollContent} keyboardShouldPersistTaps="handled">
+                    <View style={setupStyles.headerRow}>
+                        <View>
+                            <Animated.Text entering={FadeInLeft} style={[setupStyles.title, { color: theme.text }]}>{t.createAccount}</Animated.Text>
+                            <View style={setupStyles.langSwitch}>
+                                {(['en', 'ar', 'fr'] as const).map(lang => (
+                                    <TouchableOpacity
+                                        key={lang}
+                                        onPress={() => setLanguage(lang)}
+                                        style={[setupStyles.langTextBtn, language === lang && { borderBottomColor: theme.primary, borderBottomWidth: 3 }]}
+                                    >
+                                        <Text style={[setupStyles.langLabel, { color: language === lang ? theme.primary : theme.placeholder }]}>
+                                            {lang.toUpperCase()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                        <TouchableOpacity style={setupStyles.darkToggle} onPress={toggleDarkMode}>
+                            <Ionicons
+                                name={
+                                    themeMode === 'pink' ? 'heart' :
+                                        themeMode === 'darkpink' ? 'heart-dislike' :
+                                            themeMode === 'dark' ? 'moon' : 'sunny'
+                                }
+                                size={28}
+                                color={theme.primary}
+                            />
                         </TouchableOpacity>
                     </View>
-                    {selectionMode === 'surah' && (
-                        <View>
+
+                    <View style={setupStyles.progressIndicator}>
+                        <Animated.View 
+                            layout={Layout.springify()}
+                            style={[setupStyles.progressBar, { width: `${progressWidth}%`, backgroundColor: theme.primary }]} 
+                        />
+                    </View>
+
+                    {renderStepContent()}
+
+                </ScrollView>
+
+                <Animated.View layout={Layout.springify()} style={setupStyles.footerContainer}>
+                    {step > 0 && (
+                        <TouchableOpacity
+                            style={[setupStyles.navButton, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 2.5, borderRadius: theme.radius }]}
+                            onPress={prevStep}
+                        >
+                            <Text style={[setupStyles.navButtonText, { color: theme.text }]}>{t.back}</Text>
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                        style={[setupStyles.navButton, { backgroundColor: theme.primary, borderRadius: theme.radius }]}
+                        onPress={isLastStep ? handleSave : nextStep}
+                    >
+                        <Text style={setupStyles.navButtonText}>{isLastStep ? t.save : t.next}</Text>
+                    </TouchableOpacity>
+                </Animated.View>
+            </KeyboardAvoidingView>
+
+            {/* Selection Modal (Recitation) */}
+            <Modal visible={modalVisible} animationType="fade" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+                    <Animated.View entering={FadeInDown.duration(400)} style={{ height: '90%', backgroundColor: theme.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }}>
+                        <View style={[setupStyles.modalHeader, { borderBottomColor: theme.border, direction: language === 'ar' ? 'rtl' : 'ltr' }]}>
+                            <Text style={[setupStyles.modalTitle, { color: theme.text }]}>
+                                {selectionMode === 'surah' ? t.selectSurahs : `${t[selectionMode]}`}
+                            </Text>
+                            <TouchableOpacity onPress={() => { setModalVisible(false); setSearchQuery(''); }}>
+                                <Text style={{ color: theme.primary, fontWeight: '900', fontSize: 20 }}>Done</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
                             <TextInput
                                 style={[setupStyles.searchInput, { borderColor: theme.border, color: theme.text, backgroundColor: theme.card, textAlign: language === 'ar' ? 'right' : 'left', borderRadius: theme.radius / 2 }]}
                                 placeholder={t.search || "Search..."}
@@ -465,63 +662,75 @@ export default function SetupScreen() {
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
                             />
-                            <View style={{ flexDirection: language === 'ar' ? 'row-reverse' : 'row', paddingHorizontal: 16, marginBottom: 8, flexWrap: 'wrap' }}>
-                                {(['all', 'meccan', 'medinan'] as const).map(f => (
-                                    <TouchableOpacity
-                                        key={f}
-                                        onPress={() => setFilterType(f)}
-                                        style={{
-                                            paddingHorizontal: 16, paddingVertical: 8, borderRadius: theme.radius / 1.5,
-                                            backgroundColor: filterType === f ? theme.primary : theme.secondary,
-                                            marginRight: language === 'ar' ? 0 : 10, marginLeft: language === 'ar' ? 10 : 0, marginBottom: 10
-                                        }}
-                                    >
-                                        <Text style={{ color: filterType === f ? '#fff' : theme.primary, fontSize: 13, fontWeight: '800' }}>
-                                            {f.toUpperCase()}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                            <View style={{ flexDirection: language === 'ar' ? 'row-reverse' : 'row', paddingHorizontal: 16, marginBottom: 16 }}>
-                                {(['default', 'oldest', 'newest'] as const).map(s => (
-                                    <TouchableOpacity
-                                        key={s}
-                                        onPress={() => setSortType(s)}
-                                        style={{
-                                            paddingHorizontal: 16, paddingVertical: 8, borderRadius: theme.radius / 1.5,
-                                            backgroundColor: sortType === s ? theme.primary : theme.secondary,
-                                            marginRight: language === 'ar' ? 0 : 10, marginLeft: language === 'ar' ? 10 : 0
-                                        }}
-                                    >
-                                        <Text style={{ color: sortType === s ? '#fff' : theme.primary, fontSize: 13, fontWeight: '800' }}>
-                                            {s.toUpperCase()}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
                         </View>
-                    )}
-                    <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
-                        {getModalItems().map((item: any) => {
-                            const isSelected = (selectionMode === 'surah' ? selectedSurahs : selectionMode === 'juz' ? selectedJuzs : selectedHizbs).includes(item.id);
-                            return (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    style={[
-                                        setupStyles.surahItem,
-                                        isSelected ? { backgroundColor: theme.primary, borderColor: theme.primary } : { backgroundColor: theme.card, borderColor: theme.border },
-                                        { borderRadius: theme.radius / 2 }
-                                    ]}
-                                    onPress={() => toggleItem(item.id)}
-                                >
-                                    <Text style={[setupStyles.surahName, { color: isSelected ? '#fff' : theme.text }]}>{item.name}</Text>
-                                    <Ionicons name={isSelected ? "checkmark-circle" : "ellipse-outline"} size={22} color={isSelected ? "#fff" : theme.border} />
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
-                </SafeAreaView>
+                        <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+                            {getSelectionModalItems().map((item: any) => {
+                                const list = selectionMode === 'surah' ? selectedSurahs : selectionMode === 'juz' ? selectedJuzs : selectedHizbs;
+                                const isSelected = list.includes(item.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={[
+                                            setupStyles.surahItem,
+                                            isSelected ? { backgroundColor: theme.primary, borderColor: theme.primary } : { backgroundColor: theme.card, borderColor: theme.border },
+                                            { borderRadius: theme.radius / 2, flexDirection: language === 'ar' ? 'row-reverse' : 'row' }
+                                        ]}
+                                        onPress={() => toggleItem(item.id)}
+                                    >
+                                        <Text style={[setupStyles.surahName, { color: isSelected ? '#fff' : theme.text, fontWeight: '800' }]}>{item.name}</Text>
+                                        <Ionicons name={isSelected ? "checkmark-circle" : "ellipse-outline"} size={26} color={isSelected ? "#fff" : theme.border} />
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </Animated.View>
+                </View>
             </Modal>
-        </SafeAreaView>
+
+            {/* Selection Modal (Memorization) */}
+            <Modal visible={memModalVisible} animationType="fade" transparent>
+                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+                    <Animated.View entering={FadeInDown.duration(400)} style={{ height: '90%', backgroundColor: theme.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }}>
+                        <View style={[setupStyles.modalHeader, { borderBottomColor: theme.border, direction: language === 'ar' ? 'rtl' : 'ltr' }]}>
+                            <Text style={[setupStyles.modalTitle, { color: theme.text }]}>
+                                Manual Memorization
+                            </Text>
+                            <TouchableOpacity onPress={() => { setMemModalVisible(false); setSearchQuery(''); }}>
+                                <Text style={{ color: theme.primary, fontWeight: '900', fontSize: 20 }}>Done</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ direction: language === 'ar' ? 'rtl' : 'ltr' }}>
+                            <TextInput
+                                style={[setupStyles.searchInput, { borderColor: theme.border, color: theme.text, backgroundColor: theme.card, textAlign: language === 'ar' ? 'right' : 'left', borderRadius: theme.radius / 2 }]}
+                                placeholder={t.search || "Search..."}
+                                placeholderTextColor={theme.placeholder}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
+                        </View>
+                        <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+                            {getSelectionModalItems(true).map((item: any) => {
+                                const list = manualMemSelectionMode === 'surah' ? manualMemSurahs : manualMemSelectionMode === 'juz' ? manualMemJuzs : manualMemHizbs;
+                                const isSelected = list.includes(item.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={[
+                                            setupStyles.surahItem,
+                                            isSelected ? { backgroundColor: theme.primary, borderColor: theme.primary } : { backgroundColor: theme.card, borderColor: theme.border },
+                                            { borderRadius: theme.radius / 2, flexDirection: language === 'ar' ? 'row-reverse' : 'row' }
+                                        ]}
+                                        onPress={() => toggleItem(item.id, true)}
+                                    >
+                                        <Text style={[setupStyles.surahName, { color: isSelected ? '#fff' : theme.text, fontWeight: '800' }]}>{item.name}</Text>
+                                        <Ionicons name={isSelected ? "checkmark-circle" : "ellipse-outline"} size={26} color={isSelected ? "#fff" : theme.border} />
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </Animated.View>
+                </View>
+            </Modal>
+        </SafeAreaView >
     );
 }

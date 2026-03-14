@@ -106,11 +106,13 @@ export default function PreviewScreen() {
             </View>
 
             <ScrollView contentContainerStyle={previewStyles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={[previewStyles.previewContainer, { backgroundColor: '#fff', borderRadius: theme.radius / 1.5 }]}>
-                    <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }}>
-                        <QuranTable user={user} carryOver={carryOver} t={t} theme={theme} />
-                    </ViewShot>
-                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ marginBottom: 32 }}>
+                    <View style={[previewStyles.previewContainer, { backgroundColor: '#fff', borderRadius: theme.radius / 1.5, marginBottom: 0 }]}>
+                        <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }}>
+                            <QuranTable user={user} carryOver={carryOver} t={t} theme={theme} />
+                        </ViewShot>
+                    </View>
+                </ScrollView>
 
                 <View style={previewStyles.footer}>
                     <TouchableOpacity

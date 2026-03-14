@@ -36,10 +36,11 @@ const reportStyles = StyleSheet.create({
     dayRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         padding: 22,
         borderWidth: 1.5,
         marginBottom: 16,
+        gap: 16,
     },
     dayInfo: {
         flexDirection: 'row',
@@ -74,7 +75,7 @@ const reportStyles = StyleSheet.create({
 });
 
 export default function WeeklyReport() {
-    const { theme, t, user, setCarryOver, isDarkMode, language } = useApp();
+    const { theme, t, user, setCarryOver, language } = useApp();
     const router = useRouter();
     const [missedDays, setMissedDays] = useState<string[]>([]);
 

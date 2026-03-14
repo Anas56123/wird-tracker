@@ -14,34 +14,51 @@ export const GreenTheme = {
 };
 
 export const DarkTheme = {
-  primary: '#34D399', // Emerald 400
-  secondary: '#064E3B', // Deep Emerald 900
-  accent: '#FBBF24', // Amber 400
-  background: '#020617', // Slate 950
-  text: '#F8FAFC', // Slate 50
-  border: '#1E293B', // Slate 800
-  card: '#0F172A', // Slate 900
-  placeholder: '#64748B', // Slate 500
+  primary: '#059669', // Sophisticated Emerald for Dark Mode
+  secondary: '#064E3B',
+  accent: '#FBBF24',
+  background: '#040608', 
+  text: '#F8FAFC',
+  border: '#1E293B',
+  card: '#0D1117', 
+  placeholder: '#64748B',
   error: '#F87171',
   success: '#10B981',
   icon: '#94A3B8',
   radius: 24,
 };
 
-export const BoyTheme = GreenTheme; // Defaulting to Green as per user request
+export const BoyTheme = GreenTheme;
 
 export const GirlTheme = {
-  primary: '#EC4899', // Pink 500
-  secondary: '#FDF2F8', // Pink 50 tint
-  accent: '#FDE68A', // Gold/Amber hint
-  background: '#FFF1F2', // Rose 50
-  text: '#831843', // Rose 900
+  primary: '#EC4899',
+  secondary: '#FDF2F8',
+  accent: '#FDE68A',
+  background: '#FFF1F2',
+  text: '#831843',
   border: '#FCE7F3',
   card: '#FFFFFF',
   placeholder: '#D1D5DB',
   error: '#EF4444',
   success: '#10B981',
   icon: '#EC4899',
+  radius: 24,
+};
+
+export const PinkTheme = GirlTheme;
+
+export const DarkPinkTheme = {
+  primary: '#F472B6',
+  secondary: '#500724',
+  accent: '#FBBF24',
+  background: '#0A0105', // Deep dark rose/black
+  text: '#FDF2F8',
+  border: '#4C0519',
+  card: '#160209', // Very dark card
+  placeholder: '#9D174D',
+  error: '#FB7185',
+  success: '#34D399',
+  icon: '#F472B6',
   radius: 24,
 };
 
