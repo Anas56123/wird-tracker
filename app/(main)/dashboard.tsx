@@ -183,16 +183,18 @@ export default function Dashboard() {
                 </View>
 
                 <View style={[dashboardStyles.statsCard, { backgroundColor: theme.primary, borderRadius: theme.radius }]}>
-                    <Text style={dashboardStyles.statsTitle}>{t.thisLevel}</Text>
+                    <Text style={dashboardStyles.statsTitle}>{t.thisLevel} ({t.week} {user.currentWeek || 1})</Text>
                     <View style={[dashboardStyles.statsRow, { flexDirection: language === 'ar' ? 'row-reverse' : 'row' }]}>
                         <View style={dashboardStyles.statItem}>
-                            <Text style={dashboardStyles.statLabel}>{t.recitation}</Text>
+                            <Text style={dashboardStyles.statLabel}>{user.mainGoal === 'revise' ? t.revisionLabel : t.recitation}</Text>
                             <Text style={dashboardStyles.statValue}>{t.pages_count.replace('{count}', carryOver.recitation.toString())}</Text>
                         </View>
-                        <View style={dashboardStyles.statItem}>
-                            <Text style={dashboardStyles.statLabel}>{t.memorization}</Text>
-                            <Text style={dashboardStyles.statValue}>{t.pages_count.replace('{count}', carryOver.memorization.toString())}</Text>
-                        </View>
+                        {user.mainGoal !== 'revise' && (
+                            <View style={dashboardStyles.statItem}>
+                                <Text style={dashboardStyles.statLabel}>{t.memorization}</Text>
+                                <Text style={dashboardStyles.statValue}>{t.pages_count.replace('{count}', carryOver.memorization.toString())}</Text>
+                            </View>
+                        )}
                     </View>
                     <View style={[dashboardStyles.carryOverTag, { borderRadius: theme.radius / 3 }]}>
                         <Text style={dashboardStyles.carryOverText}>

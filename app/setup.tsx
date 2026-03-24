@@ -3,11 +3,12 @@ import { SelectionMode, UserProfile, daysOfWeek, getHizbRange, getJuzRange, getS
 import { Ionicons } from '@expo/vector-icons';
 import * as QuranMetadata from '@kmaslesa/quran-metadata';
 import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions } from 'react-native';
-import Animated, { FadeInDown, FadeInRight, FadeInLeft, Layout } from 'react-native-reanimated';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as Reanimated from 'react-native-reanimated';
 
-const { width } = Dimensions.get('window');
+const Animated = (Reanimated as any).default ?? Reanimated;
+const { FadeInDown, FadeInRight, FadeInLeft, Layout } = Reanimated as any;
 
 const setupStyles = StyleSheet.create({
     container: {
@@ -221,6 +222,7 @@ export default function SetupScreen() {
     
     const [memModalVisible, setMemModalVisible] = useState(false);
     const [mainGoal, setMainGoal] = useState<'memorize' | 'revise'>(user?.mainGoal || 'memorize');
+    const [hizbsPerWeek, setHizbsPerWeek] = useState(user?.hizbsPerWeek?.toString() || '1');
 
     const totalSteps = 5;
     const progressWidth = ((step + 1) / totalSteps) * 100;
@@ -233,11 +235,9 @@ export default function SetupScreen() {
         let finalHizbs = selectedHizbs;
         let finalMode = selectionMode;
 
-        if (mainGoal === 'revise') {
+        if (mainGoal === 'revise' && finalSurahs.length === 0) {
             finalMode = 'surah';
             finalSurahs = Array.from({ length: 114 }, (_, i) => i + 1);
-            finalJuzs = Array.from({ length: 30 }, (_, i) => i + 1);
-            finalHizbs = Array.from({ length: 60 }, (_, i) => i + 1);
         }
 
         const newUser: UserProfile = {
@@ -255,6 +255,8 @@ export default function SetupScreen() {
             manualMemJuzs,
             manualMemHizbs,
             mainGoal,
+            hizbsPerWeek: parseFloat(hizbsPerWeek),
+            currentWeek: 1,
         };
         setUser(newUser);
         router.replace('/(main)/dashboard');
@@ -264,15 +266,20 @@ export default function SetupScreen() {
         if (step === 1 && !name.trim()) return alert('Name is required');
         
         let targetStep = step + 1;
-        if (targetStep === 2 && mainGoal === 'revise') targetStep = 4;
-        setStep(targetStep);
+        if (targetStep === 3 && mainGoal === 'revise') targetStep = 4;
+        if (targetStep < totalSteps) {
+            setStep(targetStep);
+        } else {
+            handleSave();
+        }
     };
 
     const prevStep = () => {
-        let targetStep = step - 1;
-        if (targetStep === 3 && mainGoal === 'revise') targetStep = 1;
-        if (targetStep === 2 && mainGoal === 'revise') targetStep = 1;
-        setStep(targetStep);
+        if (step > 0) {
+            let targetStep = step - 1;
+            if (targetStep === 3 && mainGoal === 'revise') targetStep = 2;
+            setStep(targetStep);
+        }
     };
 
     const toggleItem = (id: number, isMem = false) => {
@@ -430,12 +437,42 @@ export default function SetupScreen() {
                             placeholderTextColor={theme.placeholder}
                             autoFocus
                         />
+
+                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.hizbsPerWeek}</Text>
+                        <View style={[setupStyles.genderRow, language === 'ar' && { flexDirection: 'row-reverse' }]}>
+                            {([0.5, 1, 2, 5, 10] as const).map(opt => (
+                                <TouchableOpacity
+                                    key={opt}
+                                    style={[
+                                        setupStyles.choiceButton,
+                                        parseFloat(hizbsPerWeek) === opt ? { backgroundColor: theme.primary, borderColor: theme.primary } : { borderColor: theme.border, backgroundColor: theme.card },
+                                        { borderRadius: theme.radius / 2 }
+                                    ]}
+                                    onPress={() => setHizbsPerWeek(opt.toString())}
+                                >
+                                    <Text style={[setupStyles.choiceText, parseFloat(hizbsPerWeek) === opt ? { color: '#fff' } : { color: theme.text }]}>
+                                        {opt}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <TextInput
+                            style={[
+                                setupStyles.input,
+                                { borderColor: theme.border, color: theme.text, backgroundColor: theme.card, textAlign: 'center', borderRadius: theme.radius / 2, marginTop: 12 }
+                            ]}
+                            value={hizbsPerWeek}
+                            onChangeText={setHizbsPerWeek}
+                            placeholder="Custom amount..."
+                            placeholderTextColor={theme.placeholder}
+                            keyboardType="numeric"
+                        />
                     </Animated.View>
                 );
             case 2:
                 return (
                     <Animated.View entering={FadeInRight.duration(600).springify()} style={setupStyles.formSection}>
-                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.selectionMode + " (Recitation)"}</Text>
+                        <Text style={[setupStyles.label, { color: theme.text }]}>{t.selectionMode}</Text>
                         <View style={[setupStyles.genderRow, language === 'ar' && { flexDirection: 'row-reverse' }]}>
                             {(['surah', 'juz', 'hizb'] as const).map(mode => (
                                 <TouchableOpacity

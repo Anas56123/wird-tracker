@@ -75,7 +75,7 @@ const reportStyles = StyleSheet.create({
 });
 
 export default function WeeklyReport() {
-    const { theme, t, user, setCarryOver, language } = useApp();
+    const { theme, t, user, setUser, setCarryOver, language } = useApp();
     const router = useRouter();
     const [missedDays, setMissedDays] = useState<string[]>([]);
 
@@ -116,6 +116,12 @@ export default function WeeklyReport() {
 
         const missedRec = missedDays.length * dailyRec;
         const missedMem = missedDays.length * dailyMem;
+
+        const nextWeek = (user.currentWeek || 1) + 1;
+        await setUser({
+            ...user,
+            currentWeek: nextWeek
+        });
 
         await setCarryOver({
             recitation: missedRec,

@@ -1,5 +1,6 @@
 import QuranTable from '@/components/QuranTable';
 import { useApp } from '@/context/AppContext';
+import { getTotalSelectedPages } from '@/lib/logic';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -61,7 +62,7 @@ const previewStyles = StyleSheet.create({
 });
 
 export default function PreviewScreen() {
-    const { theme, t, user, carryOver, language } = useApp();
+    const { theme, t, user, setUser, carryOver, language } = useApp();
     const router = useRouter();
     const viewShotRef = useRef<any>(null);
     const [isExporting, setIsExporting] = useState(false);
@@ -106,6 +107,37 @@ export default function PreviewScreen() {
             </View>
 
             <ScrollView contentContainerStyle={previewStyles.scrollContent} showsVerticalScrollIndicator={false}>
+                {user.hizbsPerWeek ? (
+                    <View style={{ flexDirection: isAr ? 'row-reverse' : 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20, gap: 20 }}>
+                        <TouchableOpacity 
+                            onPress={() => {
+                                const nw = Math.max(1, (user.currentWeek || 1) - 1);
+                                setUser({ ...user, currentWeek: nw });
+                            }}
+                            style={{ padding: 10, backgroundColor: theme.secondary, borderRadius: theme.radius / 2 }}
+                        >
+                            <Ionicons name={isAr ? "chevron-forward" : "chevron-back"} size={24} color={theme.primary} />
+                        </TouchableOpacity>
+                        
+                        <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>
+                            {t.week} {user.currentWeek || 1}
+                        </Text>
+
+                        <TouchableOpacity 
+                            onPress={() => {
+                                const totalPgs = getTotalSelectedPages(user);
+                                const pagesPerWeek = Math.floor((user.hizbsPerWeek || 1) * 10);
+                                const maxW = Math.ceil(totalPgs / pagesPerWeek);
+                                const nw = Math.min(maxW || 1, (user.currentWeek || 1) + 1);
+                                setUser({ ...user, currentWeek: nw });
+                            }}
+                            style={{ padding: 10, backgroundColor: theme.secondary, borderRadius: theme.radius / 2 }}
+                        >
+                            <Ionicons name={isAr ? "chevron-back" : "chevron-forward"} size={24} color={theme.primary} />
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
+
                 <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ marginBottom: 32 }}>
                     <View style={[previewStyles.previewContainer, { backgroundColor: '#fff', borderRadius: theme.radius / 1.5, marginBottom: 0 }]}>
                         <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }}>

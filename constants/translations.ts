@@ -37,6 +37,7 @@ export const translations: Record<Language, any> = {
         sunday: "Sunday",
         recitationLabel: "Recitation Wird",
         memorizationLabel: "Memorization Wird",
+        revisionLabel: "Revision Wird",
         day: "Day",
         break: "Break",
         week: "Week",
@@ -63,7 +64,10 @@ export const translations: Record<Language, any> = {
         previewTable: "Preview Table",
         previewSub: "View your weekly schedule",
         next: "Next",
-        back: "Back"
+        back: "Back",
+        hizbsPerWeek: "Hizbs per Week",
+        recitation: "Recitation",
+        memorization: "Memorization"
     },
     ar: {
         appName: "مخطط الورد",
@@ -79,7 +83,7 @@ export const translations: Record<Language, any> = {
         mainGoal: "هدفك الأساسي",
         memorize: "الحفظ والتسميع",
         revise: "المراجعة (خاتم للقرآن)",
-        selectSurahs: "اختر السور للتسميع",
+        selectSurahs: "اختر السور التي تريد قراءتها",
         memPerDay: "صفحات الحفظ يومياً",
         breakDays: "أيام الراحة (أقصى 2)",
         save: "حفظ ومتابعة",
@@ -99,8 +103,9 @@ export const translations: Record<Language, any> = {
         friday: "الجمعة",
         saturday: "السبت",
         sunday: "الأحد",
-        recitationLabel: "ورد التسميع",
+        recitationLabel: "ورد التلاوة",
         memorizationLabel: "ورد الحفظ",
+        revisionLabel: "ورد المراجعة",
         day: "اليوم",
         break: "راحة",
         week: "أسبوع",
@@ -127,7 +132,10 @@ export const translations: Record<Language, any> = {
         previewTable: "معاينة الجدول",
         previewSub: "عرض جدولك الأسبوعي",
         next: "التالي",
-        back: "السابق"
+        back: "السابق",
+        hizbsPerWeek: "كم حزب تقرأ في الأسبوع؟",
+        recitation: "التلاوة",
+        memorization: "الحفظ"
     },
     fr: {
         appName: "Wird Tracker",
@@ -165,6 +173,7 @@ export const translations: Record<Language, any> = {
         sunday: "Dimanche",
         recitationLabel: "Wird de récitation",
         memorizationLabel: "Wird de mémorisation",
+        revisionLabel: "Wird de révision",
         day: "Jour",
         break: "Repos",
         week: "Semaine",
@@ -191,6 +200,9 @@ export const translations: Record<Language, any> = {
         previewTable: "Aperçu du tableau",
         previewSub: "Voir votre programme hebdomadaire",
         next: "Suivant",
-        back: "Retour"
+        back: "Retour",
+        hizbsPerWeek: "Hizbs par Semaine",
+        recitation: "Récitation",
+        memorization: "Mémorisation"
     },
 };

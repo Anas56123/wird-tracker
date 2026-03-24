@@ -19,6 +19,8 @@ export interface UserProfile {
     manualMemJuzs?: number[];
     manualMemHizbs?: number[];
     mainGoal?: 'memorize' | 'revise';
+    hizbsPerWeek?: number;
+    currentWeek?: number;
 }
 
 export const getSurahRange = (id: number): [number, number] => {
@@ -61,17 +63,39 @@ export const daysOfWeek = [
     'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
 ];
 
+export const getTotalSelectedPages = (user: UserProfile): number => {
+    let pages: number[] = [];
+    if (user.selectionMode === 'surah') {
+        (user.selectedSurahs || []).forEach(id => {
+            const range = getSurahRange(id);
+            for (let p = range[0]; p <= range[1]; p++) if (!pages.includes(p)) pages.push(p);
+        });
+    } else if (user.selectionMode === 'juz') {
+        (user.selectedJuzs || []).forEach(id => {
+            const range = getJuzRange(id);
+            for (let p = range[0]; p <= range[1]; p++) if (!pages.includes(p)) pages.push(p);
+        });
+    } else if (user.selectionMode === 'hizb') {
+        (user.selectedHizbs || []).forEach(id => {
+            const range = getHizbRange(id);
+            for (let p = range[0]; p <= range[1]; p++) if (!pages.includes(p)) pages.push(p);
+        });
+    }
+    return pages.length;
+};
+
 export const generateWeeklyTable = (
     user: UserProfile,
     carryOver: { recitation: number; memorization: number } = { recitation: 0, memorization: 0 },
-    translations: any
+    translations: any,
+    weekIndex: number = 1
 ): TableRow[] => {
     const activeDays = daysOfWeek.filter(d => !(user.breakDays || []).includes(d));
     const numActiveDays = activeDays.length;
 
     if (numActiveDays === 0) return [];
 
-    let selectedPages: number[] = [];
+    let allSelectedPages: number[] = [];
     if (user.selectionMode === 'surah') {
         const suraList = QuranMetadata.getSuraList();
         const selected = (user.selectedSurahs || []).sort((a, b) => a - b);
@@ -79,7 +103,7 @@ export const generateWeeklyTable = (
             const s = suraList.find((item: any) => item.index === id);
             if (s) {
                 for (let p = s.startPage; p <= s.endPage; p++) {
-                    if (!selectedPages.includes(p)) selectedPages.push(p);
+                    if (!allSelectedPages.includes(p)) allSelectedPages.push(p);
                 }
             }
         });
@@ -88,7 +112,7 @@ export const generateWeeklyTable = (
         sortedJuzs.forEach(id => {
             const range = getJuzRange(id);
             for (let p = range[0]; p <= range[1]; p++) {
-                if (!selectedPages.includes(p)) selectedPages.push(p);
+                if (!allSelectedPages.includes(p)) allSelectedPages.push(p);
             }
         });
     } else if (user.selectionMode === 'hizb') {
@@ -96,12 +120,24 @@ export const generateWeeklyTable = (
         sortedHizbs.forEach(id => {
             const range = getHizbRange(id);
             for (let p = range[0]; p <= range[1]; p++) {
-                if (!selectedPages.includes(p)) selectedPages.push(p);
+                if (!allSelectedPages.includes(p)) allSelectedPages.push(p);
             }
         });
     }
 
-    selectedPages.sort((a, b) => a - b);
+    allSelectedPages.sort((a, b) => a - b);
+
+    // Filter pages for current week if hizbsPerWeek is set
+    let selectedPages = allSelectedPages;
+    if (user.hizbsPerWeek && user.hizbsPerWeek > 0) {
+        // approx 10.1 pages per hizb
+        const pagesPerWeek = Math.round(user.hizbsPerWeek * 10.1);
+        const startIdx = (weekIndex - 1) * pagesPerWeek;
+        selectedPages = allSelectedPages.slice(Math.max(0, startIdx), Math.min(startIdx + pagesPerWeek, allSelectedPages.length));
+    }
+
+    if (selectedPages.length === 0) return [];
+
     const totalRecPortionPages = selectedPages.length;
 
     const allSurasInfo = QuranMetadata.getSuraList();
@@ -120,7 +156,7 @@ export const generateWeeklyTable = (
     };
 
     const selectedSurahIndices = new Set<number>();
-    selectedPages.forEach(p => {
+    allSelectedPages.forEach(p => {
         const ids = getSurahIdsForPage(p);
         ids.forEach(id => selectedSurahIndices.add(id));
     });
@@ -220,219 +256,125 @@ export const generateWeeklyTable = (
     const isReviseMode = user.mainGoal === 'revise';
     const showMemorization = !isFullQuranSelected && !isManualEmpty && memPageSequence.length > 0 && !isReviseMode;
 
-    const totalRecPages = totalRecPortionPages + carryOver.recitation;
-    const totalMemPagesPerWeek = (user.memPerDay * numActiveDays) + carryOver.memorization;
+    const suraList = QuranMetadata.getSuraList();
+    const ayahMap: any[] = [];
+    suraList.forEach((s: any) => {
+        const sr = QuranMetadata.getSuraStartEndAyahIndex(s.index);
+        let curPage = s.startPage;
+        for (let a = 1; a <= s.numberOfAyas; a++) {
+            // Find which page this ayah belongs to (approx)
+            // A more accurate way is to check all pages
+            ayahMap.push({ surah: s.index, ayah: a, page: curPage });
+        }
+    });
 
-    const recPerDay = totalRecPages / numActiveDays;
-    const memPerDayGoal = totalMemPagesPerWeek / numActiveDays;
-
-    let currentRecIdx = 0;
-    let currentMemSeqIdx = 0;
-
-    const getLastCompletedSurahName = (upToSeqIdx: number) => {
-        if (upToSeqIdx <= 0) return null;
-        const coveredPages = new Set(memPageSequence.slice(0, upToSeqIdx));
-        const suraList = QuranMetadata.getSuraList();
-        let lastFinished = null;
-
-        for (let i = 0; i < suraList.length; i++) {
-            const s = suraList[i];
-            let allPagesIn = true;
-            for (let p = s.startPage; p <= s.endPage; p++) {
-                if (!coveredPages.has(p)) {
-                    allPagesIn = false;
-                    break;
-                }
-            }
-            if (allPagesIn) {
-                lastFinished = user.language === 'ar' ? s.name.arabic : s.name.englishTranscription;
+    const getAyahInfo = (idx: number) => {
+        // Find surah by range
+        const sIdx = suraList.findIndex((s: any) => {
+            const sr = QuranMetadata.getSuraStartEndAyahIndex(s.index);
+            return idx >= (sr.startAyahIndex - 1) && idx < sr.endAyahIndex;
+        });
+        if (sIdx === -1) return null;
+        const s = suraList[sIdx];
+        const sr = QuranMetadata.getSuraStartEndAyahIndex(s.index);
+        const relAyah = idx - (sr.startAyahIndex - 1) + 1;
+        
+        // Find page
+        let p = s.startPage;
+        for (let i = s.startPage; i <= s.endPage; i++) {
+            const pr = QuranMetadata.getPageStartEndAyahIndex(i);
+            if (idx >= (pr.startAyahIndex - 1) && idx < pr.endAyahIndex) {
+                p = i;
+                break;
             }
         }
-        return lastFinished;
+        return { surah: s.index, ayah: relAyah, page: p };
     };
 
-    // Pre-calculate full-surah Juz and Hizb mappings for condensation
-    const juzSurahMap = new Map<number, number[]>();
-    for (let j = 1; j <= 30; j++) {
-        const juz = QuranMetadata.getJuzById(j);
-        const startSura = juz.surahs[0];
-        const lastSura = juz.surahs[juz.surahs.length - 1];
-        const lastSuraInfo = QuranMetadata.getSuraByIndex(lastSura.id);
-        
-        // A Juz is 'Whole' if it starts at the beginning of its first surah
-        // and ends at the end of its last surah.
-        if (startSura.startAyah === 1 && lastSura.endAyah === lastSuraInfo.numberOfAyas) {
-            const ids = juz.surahs.map((s: any) => s.id);
-            juzSurahMap.set(j, ids);
-        }
+    const getAyahsFromPageList = (pages: number[]) => {
+        const ayahs: number[] = [];
+        const sorted = [...pages].sort((a,b) => a - b);
+        sorted.forEach(p => {
+            const range = QuranMetadata.getPageStartEndAyahIndex(p);
+            if (range) {
+                for (let i = range.startAyahIndex; i <= range.endAyahIndex; i++) {
+                    if (!ayahs.includes(i)) ayahs.push(i);
+                }
+            }
+        });
+        return ayahs;
+    };
+
+    const recAyahSeq = getAyahsFromPageList(selectedPages);
+    const memAyahSeq = getAyahsFromPageList(memPageSequence);
+
+    // Initial offset for memorization sequence based on week
+    const memAyahGoalPerWeek = (user.memPerDay * numActiveDays) * 15; // approx 15 ayahs per page
+    let totalMemAyahOffset = (weekIndex - 1) * memAyahGoalPerWeek;
+    
+    // Safety check to not exceed total ayahs
+    if (totalMemAyahOffset >= memAyahSeq.length && memAyahSeq.length > 0) {
+        totalMemAyahOffset = memAyahSeq.length - 1;
     }
 
-    const hizbSurahMap = new Map<number, number[]>();
-    for (let h = 1; h <= 60; h++) {
-        const hRange = QuranMetadata.getHizbStartEndAyahIndex(h);
-        const suras = QuranMetadata.getSuraList().filter((s: any) => {
-            const sr = QuranMetadata.getSuraStartEndAyahIndex(s.index);
-            return Math.max(hRange.startAyahIndex - 1, sr.startAyahIndex) < Math.min(hRange.endAyahIndex, sr.endAyahIndex);
+    const currentMemAyahSeq = memAyahSeq.slice(totalMemAyahOffset);
+
+    // Calculate goals in Ayahs
+    const recAyahsPerDay = recAyahSeq.length / numActiveDays;
+    const memAyahsPerDay = (user.memPerDay * 15); // goal in ayahs
+
+    let curRecAyahIdx = 0;
+    let curMemAyahIdx = 0;
+
+    const getDetailedInfoForAyahs = (ayahIndices: number[], showVerses: boolean = true) => {
+        if (ayahIndices.length === 0) return "";
+        
+        // Get unique surahs in this range
+        const surahs = new Set<number>();
+        ayahIndices.forEach(idx => {
+            const info = getAyahInfo(idx);
+            if (info) surahs.add(info.surah);
         });
         
-        if (suras.length > 0) {
-            const ssr = QuranMetadata.getSuraStartEndAyahIndex(suras[0].index);
-            const esr = QuranMetadata.getSuraStartEndAyahIndex(suras[suras.length - 1].index);
-            if (hRange.startAyahIndex - 1 === ssr.startAyahIndex && hRange.endAyahIndex === esr.endAyahIndex) {
-                const ids = suras.map((s: any) => s.index);
-                hizbSurahMap.set(h, ids);
-            }
-        }
-    }
-
-    const getDetailedInfoForPages = (pages: number[], showVerses: boolean = true, dayIndex?: number, mapping?: Map<number, number>) => {
-        if (pages.length === 0) return "";
+        const sortedSurahs = Array.from(surahs).sort((a,b) => a - b);
+        const parts: string[] = [];
         
-        // Always show min-max regardless of traversal direction
-        const minP = Math.min(...pages);
-        const maxP = Math.max(...pages);
-        const pageLabel = user.language === 'ar' ? 'ص' : 'p.';
-        const pageRange = minP === maxP ? `${pageLabel} ${minP}` : `${pageLabel} ${minP}-${maxP}`;
-
-        // Exact page range match for units (Juz/Hizb) - highest priority
-        if (!mapping) {
-            for (let j = 1; j <= 30; j++) {
-                const range = getJuzRange(j);
-                if (range[0] === minP && range[1] === maxP) {
-                    const juzData = QuranMetadata.getJuzById(j);
-                    const firstSura = QuranMetadata.getSuraByIndex(juzData.startSuraIndex);
-                    const sName = user.language === 'ar' ? firstSura.name.arabic : firstSura.name.englishTranscription;
-                    return `${translations.juz} ${sName} (${pageRange})`;
-                }
-            }
-        }
-
-        const surahsToProcess: number[] = [];
-        if (mapping && dayIndex !== undefined) {
-            mapping.forEach((assignedDay, sIdx) => {
-                if (assignedDay === dayIndex) {
-                    surahsToProcess.push(sIdx);
-                }
-            });
-        } else {
-            const allSuras = QuranMetadata.getSuraList();
-            const rangeStart = QuranMetadata.getPageStartEndAyahIndex(minP);
-            const rangeEnd = QuranMetadata.getPageStartEndAyahIndex(maxP);
-            if (!rangeStart || !rangeEnd) return "";
-            allSuras.forEach((s: any) => {
-                const sr = QuranMetadata.getSuraStartEndAyahIndex(s.index);
-                // Use strict < to avoid false overlap at shared boundary indices between adjacent surahs
-                if (Math.max(rangeStart.startAyahIndex, sr.startAyahIndex) < Math.min(rangeEnd.endAyahIndex, sr.endAyahIndex)) {
-                    surahsToProcess.push(s.index);
-                }
-            });
-        }
-
-        // Sort surahs relative to the sequence direction
-        surahsToProcess.sort((a, b) => a - b);
-        if (memDirection === 'backward' && !mapping) surahsToProcess.sort((a, b) => b - a);
-
-        const processedLabels: string[] = [];
-        const consumedIndices = new Set<number>();
-        
-        // Try to condense into Juz/Hizb units if they match exactly
-        // Priority: Juz > Hizb
-        for (let j = 1; j <= 30; j++) {
-            const jSuras = juzSurahMap.get(j);
-            if (jSuras && jSuras.every(id => surahsToProcess.includes(id))) {
-                const firstOccurence = surahsToProcess.indexOf(jSuras[0]);
-                // Ensure sequence is contiguous in current selection
-                let contiguous = true;
-                for (let k = 0; k < jSuras.length; k++) {
-                    if (surahsToProcess[firstOccurence + k] !== jSuras[k]) { contiguous = false; break; }
-                }
-                
-                if (contiguous) {
-                    jSuras.forEach(id => consumedIndices.add(id));
-                    // Construct label
-                    const firstSura = QuranMetadata.getSuraByIndex(jSuras[0]);
-                    const sName = user.language === 'ar' ? firstSura.name.arabic : firstSura.name.englishTranscription;
-                    const label = `${translations.juz} ${sName}`;
-                    // Insert label at its start position and mark others as consumed
-                    processedLabels[firstOccurence] = label;
-                }
-            }
-        }
-        
-        for (let h = 1; h <= 60; h++) {
-            const hSuras = hizbSurahMap.get(h);
-            if (hSuras && hSuras.length > 0 && hSuras.every(id => surahsToProcess.includes(id) && !consumedIndices.has(id))) {
-                const firstOccurence = surahsToProcess.indexOf(hSuras[0]);
-                let contiguous = true;
-                for (let k = 0; k < hSuras.length; k++) {
-                    if (surahsToProcess[firstOccurence + k] !== hSuras[k]) { contiguous = false; break; }
-                }
-                
-                if (contiguous) {
-                    hSuras.forEach(id => consumedIndices.add(id));
-                    const firstSura = QuranMetadata.getSuraByIndex(hSuras[0]);
-                    const sName = user.language === 'ar' ? firstSura.name.arabic : firstSura.name.englishTranscription;
-                    const label = `${translations.hizb} ${sName}`;
-                    processedLabels[firstOccurence] = label;
-                }
-            }
-        }
-
-        // Final label generation
-        const labels: string[] = [];
-        for (let i = 0; i < surahsToProcess.length; i++) {
-            if (processedLabels[i]) {
-                labels.push(processedLabels[i]);
-            } else if (!consumedIndices.has(surahsToProcess[i])) {
-                const idx = surahsToProcess[i];
-                const s = QuranMetadata.getSuraByIndex(idx);
-                const name = user.language === 'ar' ? s.name.arabic : s.name.englishTranscription;
+        sortedSurahs.forEach(sIdx => {
+            const s = QuranMetadata.getSuraByIndex(sIdx);
+            const name = user.language === 'ar' ? s.name.arabic : s.name.englishTranscription;
+            
+            const firstInS = ayahIndices.find(idx => getAyahInfo(idx)?.surah === sIdx);
+            const lastInS = [...ayahIndices].reverse().find(idx => getAyahInfo(idx)?.surah === sIdx);
+            
+            if (firstInS !== undefined && lastInS !== undefined) {
+                const a1 = getAyahInfo(firstInS)!;
+                const a2 = getAyahInfo(lastInS)!;
                 
                 if (!showVerses) {
-                    labels.push(name);
+                    parts.push(name);
+                } else if (a1.ayah === 1 && a2.ayah === s.numberOfAyas) {
+                    parts.push(name);
                 } else {
-                    const sr = QuranMetadata.getSuraStartEndAyahIndex(idx);
-                    const rangeStart = QuranMetadata.getPageStartEndAyahIndex(minP);
-                    const rangeEnd = QuranMetadata.getPageStartEndAyahIndex(maxP);
-                    const pStart = Math.max(rangeStart.startAyahIndex, sr.startAyahIndex);
-                    const pEnd = Math.min(rangeEnd.endAyahIndex, sr.endAyahIndex);
-                    const relStart = pStart - sr.startAyahIndex + 1;
-                    const relEnd = pEnd - sr.startAyahIndex + 1;
-                    labels.push((relStart === 1 && relEnd >= s.numberOfAyas) ? name : `${name} (${relStart}-${relEnd})`);
+                    parts.push(`${name} (${a1.ayah}-${a2.ayah})`);
                 }
             }
-        }
+        });
 
-        if (labels.length === 0) return `(${pageRange})`;
-        return `${labels.join('، ')} (${pageRange})`;
+        // Add page range for reference
+        const pages = new Set<number>();
+        ayahIndices.forEach(idx => {
+            const info = getAyahInfo(idx);
+            if (info) pages.add(info.page);
+        });
+        const sortedP = Array.from(pages).sort((a,b) => a - b);
+        const pLabel = user.language === 'ar' ? 'ص' : 'p.';
+        const pStr = sortedP.length === 1 ? `${pLabel} ${sortedP[0]}` : `${pLabel} ${sortedP[0]}-${sortedP[sortedP.length - 1]}`;
+        
+        return `${parts.join('، ')} (${pStr})`;
     };
-
-
-    const computeSurahToDayMapping = (pageSequence: number[], perDayGoal: number) => {
-        const toDay = new Map<number, number>();
-        let tempIdx = 0;
-        for (let dIdx = 0; dIdx < activeDays.length; dIdx++) {
-            const nextIdx = tempIdx + perDayGoal;
-            const pages = pageSequence.slice(Math.floor(tempIdx), Math.min(Math.ceil(nextIdx), pageSequence.length));
-            pages.forEach(p => {
-                getSurahIdsForPage(p).forEach(sIdx => {
-                    if (!toDay.has(sIdx)) toDay.set(sIdx, dIdx);
-                });
-            });
-            tempIdx = nextIdx;
-        }
-        return toDay;
-    };
-
-    const recMapping = computeSurahToDayMapping(selectedPages, recPerDay);
-    const activeDayToGlobalIndex = activeDays.map(d => daysOfWeek.indexOf(d));
 
     return daysOfWeek.map((day) => {
-        const globalIdx = daysOfWeek.indexOf(day);
-        const activeIdx = activeDayToGlobalIndex.indexOf(globalIdx);
-        const isBreak = activeIdx === -1;
-
-        if (isBreak) {
+        if ((user.breakDays || []).includes(day)) {
             return {
                 day: translations[day],
                 recitation: translations.break,
@@ -441,41 +383,25 @@ export const generateWeeklyTable = (
             };
         }
 
-        const nextRecIdx = currentRecIdx + recPerDay;
-        const nextMemSeqIdx = currentMemSeqIdx + memPerDayGoal;
+        const nextRecIdx = curRecAyahIdx + recAyahsPerDay;
+        const nextMemIdx = curMemAyahIdx + memAyahsPerDay;
 
-        const recPages = selectedPages.slice(Math.floor(currentRecIdx), Math.min(Math.ceil(nextRecIdx), selectedPages.length));
-        const memPages = memPageSequence.slice(Math.floor(currentMemSeqIdx), Math.min(Math.ceil(nextMemSeqIdx), memPageSequence.length));
+        const recAyahs = recAyahSeq.slice(Math.round(curRecAyahIdx), Math.min(Math.round(nextRecIdx), recAyahSeq.length));
+        const memAyahs = currentMemAyahSeq.slice(Math.round(curMemAyahIdx), Math.min(Math.round(nextMemIdx), currentMemAyahSeq.length));
 
         const row: TableRow = {
             day: translations[day],
-            recitation: getDetailedInfoForPages(recPages, false, activeIdx, recMapping),
+            recitation: getDetailedInfoForAyahs(recAyahs, false),
             memorization: "-",
             isBreak: false
         };
 
-        if (showMemorization && memPages.length > 0) {
-            // Memorization always shows actual verse content (no mapping), so every page has a label
-            const currentPortion = getDetailedInfoForPages(memPages, true);
-            const completedSurah = getLastCompletedSurahName(Math.floor(nextMemSeqIdx));
-            
-            if (completedSurah) {
-                const reviewPrefix = user.language === 'ar' ? "مراجعة: " : "Review: ";
-                const reviewLabel = `${reviewPrefix}${completedSurah}`;
-                row.memorization = currentPortion.includes(completedSurah) ? currentPortion : `${currentPortion}\n(${reviewLabel})`;
-            } else {
-                row.memorization = currentPortion;
-            }
-        } else if (showMemorization) {
-            const completedSurah = getLastCompletedSurahName(Math.floor(nextMemSeqIdx));
-            if (completedSurah) {
-                const reviewPrefix = user.language === 'ar' ? "مراجعة: " : "Review: ";
-                row.memorization = `${reviewPrefix}${completedSurah}`;
-            }
+        if (showMemorization && memAyahs.length > 0) {
+            row.memorization = getDetailedInfoForAyahs(memAyahs, true);
         }
 
-        currentRecIdx = nextRecIdx;
-        currentMemSeqIdx = nextMemSeqIdx;
+        curRecAyahIdx = nextRecIdx;
+        curMemAyahIdx = nextMemIdx;
         return row;
     });
 };

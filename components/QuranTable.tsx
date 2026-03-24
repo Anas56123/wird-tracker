@@ -10,7 +10,7 @@ interface Props {
 }
 
 const QuranTable: React.FC<Props> = ({ user, carryOver, t, theme }) => {
-    const tableData = generateWeeklyTable(user, carryOver, t);
+    const tableData = generateWeeklyTable(user, carryOver, t, user.currentWeek || 1);
     const isAr = user.language === 'ar';
 
     return (
@@ -26,7 +26,7 @@ const QuranTable: React.FC<Props> = ({ user, carryOver, t, theme }) => {
                     <Text style={[styles.headerSub, { color: theme.text }]}>{t.student}: {user.name}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                    <Text style={[styles.headerLabel, { color: theme.placeholder }]}>{t.week} 1</Text>
+                    <Text style={[styles.headerLabel, { color: theme.placeholder }]}>{t.week} {user.currentWeek || 1}</Text>
                 </View>
             </View>
 
@@ -50,11 +50,13 @@ const QuranTable: React.FC<Props> = ({ user, carryOver, t, theme }) => {
                         <Text style={styles.cellHeader}>{t.day}</Text>
                     </View>
                     <View style={{ flex: 1.5, borderEndWidth: 1.5, borderBottomWidth: 1.5, borderColor: theme.border, justifyContent: 'center' }}>
-                        <Text style={styles.cellHeader}>{t.recitationLabel}</Text>
+                        <Text style={styles.cellHeader}>{user.mainGoal === 'revise' ? t.revisionLabel : t.recitationLabel}</Text>
                     </View>
-                    <View style={{ flex: 1.2, borderEndWidth: 1.5, borderBottomWidth: 1.5, borderColor: theme.border, justifyContent: 'center' }}>
-                        <Text style={styles.cellHeader}>{t.memorizationLabel}</Text>
-                    </View>
+                    {user.mainGoal !== 'revise' && (
+                        <View style={{ flex: 1.2, borderEndWidth: 1.5, borderBottomWidth: 1.5, borderColor: theme.border, justifyContent: 'center' }}>
+                            <Text style={styles.cellHeader}>{t.memorizationLabel}</Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* Rows */}
@@ -66,9 +68,11 @@ const QuranTable: React.FC<Props> = ({ user, carryOver, t, theme }) => {
                         <View style={[styles.cell, { flex: 1.5, borderEndWidth: 1.5, borderBottomWidth: 1.5, borderColor: theme.border }]}>
                             <Text style={[styles.cellText, { color: theme.text }]}>{row.recitation}</Text>
                         </View>
-                        <View style={[styles.cell, { flex: 1.2, borderEndWidth: 1.5, borderBottomWidth: 1.5, borderColor: theme.border }]}>
-                            <Text style={[styles.cellText, { color: theme.text }]}>{row.memorization}</Text>
-                        </View>
+                        {user.mainGoal !== 'revise' && (
+                            <View style={[styles.cell, { flex: 1.2, borderEndWidth: 1.5, borderBottomWidth: 1.5, borderColor: theme.border }]}>
+                                <Text style={[styles.cellText, { color: theme.text }]}>{row.memorization}</Text>
+                            </View>
+                        )}
                     </View>
                 ))}
             </View>
