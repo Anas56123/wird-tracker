@@ -326,20 +326,94 @@ export const generateWeeklyTable = (
     let curRecAyahIdx = 0;
     let curMemAyahIdx = 0;
 
+    // Pre-calculate full-surah Juz and Hizb mappings for condensation
+    const juzSurahMap = new Map<number, number[]>();
+    for (let j = 1; j <= 30; j++) {
+        const juz = QuranMetadata.getJuzById(j);
+        const startSura = juz.surahs[0];
+        const lastSura = juz.surahs[juz.surahs.length - 1];
+        const lastSuraInfo = QuranMetadata.getSuraByIndex(lastSura.id);
+        if (startSura.startAyah === 1 && lastSura.endAyah === lastSuraInfo.numberOfAyas) {
+            juzSurahMap.set(j, juz.surahs.map((s: any) => s.id));
+        }
+    }
+
+    const hizbSurahMap = new Map<number, number[]>();
+    const wholeHizbs = [
+        {h: 32, s: [20, 20]}, {h: 33, s: [21, 21]}, {h: 34, s: [22, 22]},
+        {h: 54, s: [55, 57]}, {h: 55, s: [58, 61]}, {h: 56, s: [62, 66]},
+        {h: 57, s: [67, 71]}, {h: 58, s: [72, 77]}, {h: 59, s: [78, 86]},
+        {h: 60, s: [87, 114]}
+    ];
+    wholeHizbs.forEach(item => {
+        const ids = [];
+        for (let i = item.s[0]; i <= item.s[1]; i++) ids.push(i);
+        hizbSurahMap.set(item.h, ids);
+    });
+
     const getDetailedInfoForAyahs = (ayahIndices: number[], showVerses: boolean = true) => {
         if (ayahIndices.length === 0) return "";
         
-        // Get unique surahs in this range
-        const surahs = new Set<number>();
+        const surahsInRange = new Set<number>();
         ayahIndices.forEach(idx => {
             const info = getAyahInfo(idx);
-            if (info) surahs.add(info.surah);
+            if (info) surahsInRange.add(info.surah);
         });
         
-        const sortedSurahs = Array.from(surahs).sort((a,b) => a - b);
-        const parts: string[] = [];
-        
+        let sortedSurahs = Array.from(surahsInRange).sort((a,b) => a - b);
+        const consumedSurahs = new Set<number>();
+        const labels: string[] = [];
+
+        // 1. Try to condense into Juz units
+        for (let j = 1; j <= 30; j++) {
+            const jSuras = juzSurahMap.get(j);
+            if (jSuras && jSuras.every(id => surahsInRange.has(id))) {
+                // Check if all surahs in this Juz are "full" in the context of this day
+                const areFull = jSuras.every(sIdx => {
+                    const firstInS = ayahIndices.find(idx => getAyahInfo(idx)?.surah === sIdx);
+                    const lastInS = [...ayahIndices].reverse().find(idx => getAyahInfo(idx)?.surah === sIdx);
+                    const s = QuranMetadata.getSuraByIndex(sIdx);
+                    if (firstInS === undefined || lastInS === undefined) return false;
+                    const a1 = getAyahInfo(firstInS)!;
+                    const a2 = getAyahInfo(lastInS)!;
+                    return a1.ayah === 1 && a2.ayah === s.numberOfAyas;
+                });
+                
+                if (areFull) {
+                    const firstSura = QuranMetadata.getSuraByIndex(jSuras[0]);
+                    const sName = user.language === 'ar' ? firstSura.name.arabic : firstSura.name.englishTranscription;
+                    labels.push(`${translations.juz} ${sName}`);
+                    jSuras.forEach(id => consumedSurahs.add(id));
+                }
+            }
+        }
+
+        // 2. Try to condense into Hizb units
+        for (let h = 1; h <= 60; h++) {
+            const hSuras = hizbSurahMap.get(h);
+            if (hSuras && hSuras.every(id => surahsInRange.has(id) && !consumedSurahs.has(id))) {
+                const areFull = hSuras.every(sIdx => {
+                    const firstInS = ayahIndices.find(idx => getAyahInfo(idx)?.surah === sIdx);
+                    const lastInS = [...ayahIndices].reverse().find(idx => getAyahInfo(idx)?.surah === sIdx);
+                    const s = QuranMetadata.getSuraByIndex(sIdx);
+                    if (firstInS === undefined || lastInS === undefined) return false;
+                    const a1 = getAyahInfo(firstInS)!;
+                    const a2 = getAyahInfo(lastInS)!;
+                    return a1.ayah === 1 && a2.ayah === s.numberOfAyas;
+                });
+                
+                if (areFull) {
+                    const firstSura = QuranMetadata.getSuraByIndex(hSuras[0]);
+                    const sName = user.language === 'ar' ? firstSura.name.arabic : firstSura.name.englishTranscription;
+                    labels.push(`${translations.hizb} ${sName}`);
+                    hSuras.forEach(id => consumedSurahs.add(id));
+                }
+            }
+        }
+
+        // 3. Add remaining surahs
         sortedSurahs.forEach(sIdx => {
+            if (consumedSurahs.has(sIdx)) return;
             const s = QuranMetadata.getSuraByIndex(sIdx);
             const name = user.language === 'ar' ? s.name.arabic : s.name.englishTranscription;
             
@@ -349,18 +423,14 @@ export const generateWeeklyTable = (
             if (firstInS !== undefined && lastInS !== undefined) {
                 const a1 = getAyahInfo(firstInS)!;
                 const a2 = getAyahInfo(lastInS)!;
-                
-                if (!showVerses) {
-                    parts.push(name);
-                } else if (a1.ayah === 1 && a2.ayah === s.numberOfAyas) {
-                    parts.push(name);
+                if (!showVerses || (a1.ayah === 1 && a2.ayah === s.numberOfAyas)) {
+                    labels.push(name);
                 } else {
-                    parts.push(`${name} (${a1.ayah}-${a2.ayah})`);
+                    labels.push(`${name} (${a1.ayah}-${a2.ayah})`);
                 }
             }
         });
 
-        // Add page range for reference
         const pages = new Set<number>();
         ayahIndices.forEach(idx => {
             const info = getAyahInfo(idx);
@@ -370,7 +440,7 @@ export const generateWeeklyTable = (
         const pLabel = user.language === 'ar' ? 'ص' : 'p.';
         const pStr = sortedP.length === 1 ? `${pLabel} ${sortedP[0]}` : `${pLabel} ${sortedP[0]}-${sortedP[sortedP.length - 1]}`;
         
-        return `${parts.join('، ')} (${pStr})`;
+        return `${labels.join('، ')} (${pStr})`;
     };
 
     return daysOfWeek.map((day) => {
